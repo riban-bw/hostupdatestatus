@@ -1,0 +1,24 @@
+#!/bin/sh
+##############################################################################
+# This bash script provides a socket client which connects to xxx #
+#                                                                            #
+# NOTE: This is insecure and should only be run on closed LANs.              #
+# Licence: GPL V3. Copyright Brian Walton brian@riban.co.uk                  #
+#                                                                            #
+# Dependancies: hostname route awk grep head apt lsof lsb_release            #
+#                                                                            #
+##############################################################################
+
+SERVER=127.0.0.1 #Set server IP address
+PORT=2001 #Set server IP port
+HOST=`hostname`
+NIC=`route|grep default|awk '{print $8}'`
+IP=`ifconfig $NIC|grep "inet addr"|head -n1|awk '{print $2}'|awk -F':' '{print $2}'`
+MAC=`ifconfig $NIC|grep "HWaddr"|head -n1|awk -F'HWaddr ' '{print $2}'|awk '{print $1}'`
+UPDATES=`apt list --upgradable 2>/dev/null|wc -l`
+#REBOOT=`ls /var/run/reboot-required>>/dev/null 2>&1 && echo Y||echo N`
+REBOOT=`lsof 2>/dev/null|grep lib|grep DEL > /dev/null && echo Y || echo N`
+VERSION=`lsb_release -d|awk -F':\t' '{print $2}'`
+
+echo "INSERT INTO hosts(mac) SELECT '$MAC' WHERE NOT EXISTS(SELECT 1 FROM hosts WHERE mac='$MAC');UPDATE hosts SET hostname='$HOST', ip='$IP', version='$VERSION', updates=$UPDATES, reboot='$REBOOT' WHERE mac='$MAC';"|nc $SERVER $PORT
+

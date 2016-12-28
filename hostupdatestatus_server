@@ -1,0 +1,39 @@
+#!/bin/sh
+##############################################################################
+# This bash script provides a web server and socket server.                  #
+# The web server provides a web page showing each host.                      #
+# The socket server accepts updates from hosts running update_status script. #
+#                                                                            #
+# NOTE: This is insecure and should only be run on closed LANs.              #
+# Licence: GPL V3. Copyright Brian Walton brian@riban.co.uk                  #
+#                                                                            #
+# Dependancies: sqlite3 nc python2                                           #
+#                                                                            #
+##############################################################################
+
+SOCKETPORT=2001
+HTTPPORT=2002
+DATABASE=hostupdatestatus.db
+
+python -m SimpleHTTPServer $HTTPPORT & 2>/dev/null
+sqlite3 $DATABASE "CREATE TABLE hosts(hostname varchar, mac varchar, ip varchar, version varchar, updates int, reboot char, primary key (mac));" 2>/dev/null
+
+while true
+  # Listen for connections and update database
+  do nc -l $SOCKETPORT | sqlite3 $DATABASE
+  # Update web page
+  echo "<html><head><title>riban host monitor</title><script src="sorttable.js"></script></head>" > index.html
+  echo "<body><h1>riban Host Monitor</h1>" >> index.html
+  echo "<table class="sortable" border="1"><tr><th>Host</th><th>MAC</th><th>IP</th><th>Version</th><th>Updates</th><th>Reboot</th></tr>" >> index.html
+
+  # Get database content and populat table
+  echo "select * from hosts order by hostname;" | sqlite3 hoststatus.db|while read -r line
+  do
+    echo "<tr>" >> index.html
+    echo $line | awk -F'|' '{for(i = 1; i <= NF; i++) print "<td>"$i"</td>"}' >> index.html
+    echo "</tr>" >> index.html
+  done
+
+  echo "</table>" >> index.html
+  echo "</body></html>" >> index.html
+done
