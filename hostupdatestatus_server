@@ -27,7 +27,7 @@ while true
   echo "<table class="sortable" border="1"><tr><th>Host</th><th>MAC</th><th>IP</th><th>Version</th><th>Updates</th><th>Reboot</th></tr>" >> index.html
 
   # Get database content and populat table
-  echo "select * from hosts order by hostname;" | sqlite3 hoststatus.db|while read -r line
+  echo "select * from hosts order by hostname;" | sqlite3 $DATABASE|while read -r line
   do
     echo "<tr>" >> index.html
     echo $line | awk -F'|' '{for(i = 1; i <= NF; i++) print "<td>"$i"</td>"}' >> index.html
